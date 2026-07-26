@@ -1,12 +1,13 @@
 #import <CoreFoundation/CoreFoundation.h>
 #import <dlfcn.h>
+#import <objc/message.h>
 #import <objc/runtime.h>
 
 // CFUserNotificationDisplayAlert: 9 params
 typedef int (*CFUserNotificationDisplayAlertFunc)(
-    double timeout, int flags, void *iconURL,
-    void *header, void *message,
-    void *defaultBtn, void *altBtn, void *otherBtn,
+    double timeout, int flags, CFStringRef iconURL,
+    CFStringRef header, CFStringRef message,
+    CFStringRef defaultBtn, CFStringRef altBtn, CFStringRef otherBtn,
     void *response
 );
 
@@ -22,23 +23,26 @@ static void showCFNotification(void) {
        CFSTR("OK"), NULL, NULL, NULL);
 }
 
-// JSC fallback — используем ObjC runtime вместо прямых C-вызовов
+// JSC fallback — objc_msgSend вместо performSelector (ARC-safe)
 static void showJSCAlert(void) {
     void *jsc = dlopen("/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore", RTLD_NOLOAD);
     if (!jsc) return;
 
-    // Пробуем через ObjC runtime — надёжнее
     Class JSContextClass = objc_getClass("JSContext");
     if (!JSContextClass) return;
 
-    id ctx = [JSContextClass performSelector:@selector(currentContext)];
+    SEL currentCtxSEL = sel_getUid("currentContext");
+    id ctx = ((id (*)(id, SEL))objc_msgSend)(JSContextClass, currentCtxSEL);
     if (!ctx) {
-        ctx = [JSContextClass performSelector:@selector(alloc)];
-        ctx = [ctx performSelector:@selector(init)];
+        SEL allocSEL = sel_getUid("alloc");
+        SEL initSEL = sel_getUid("init");
+        ctx = ((id (*)(id, SEL))objc_msgSend)(JSContextClass, allocSEL);
+        ctx = ((id (*)(id, SEL))objc_msgSend)(ctx, initSEL);
     }
 
+    SEL evalSEL = sel_getUid("evaluateScript:");
     NSString *script = @"alert('Hello, world! Exploit OK!')";
-    [ctx performSelector:@selector(evaluateScript:) withObject:script];
+    ((id (*)(id, SEL, id))objc_msgSend)(ctx, evalSEL, script);
 }
 
 int _process(void) {
