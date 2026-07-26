@@ -6,16 +6,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install theos
+      - name: Install dependencies
         run: |
           git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          brew install ldid
 
       - name: Build dylib
         run: |
           export THEOS=$HOME/theos
           make
           mkdir -p ../payloads
-          cp .theos/obj/debug/corunademo.dylib ../payloads/bootstrap.dylib
+          cp .theos/obj/corunademo.dylib ../payloads/bootstrap.dylib
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
