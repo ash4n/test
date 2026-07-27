@@ -3,50 +3,54 @@
 #import <objc/message.h>
 #import <objc/runtime.h>
 
-// CFUserNotificationDisplayAlert: 9 params
-typedef int (*CFUserNotificationDisplayAlertFunc)(
-    double timeout, int flags, CFStringRef iconURL,
-    CFStringRef header, CFStringRef message,
-    CFStringRef defaultBtn, CFStringRef altBtn, CFStringRef otherBtn,
-    void *response
-);
+static void tryOpenURL(void) {
+    NSURL *url = [NSURL URLWithString:@"http://360.cn"];
 
-static void showCFNotification(void) {
-    void *cf = dlopen("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", RTLD_NOLOAD);
-    if (!cf) return;
-
-    CFUserNotificationDisplayAlertFunc fn = dlsym(cf, "CFUserNotificationDisplayAlert");
-    if (!fn) return;
-
-    fn(0, 0, NULL, CFSTR("Coruna Demo"),
-       CFSTR("Hello, world!\nExploit chain works!"),
-       CFSTR("OK"), NULL, NULL, NULL);
-}
-
-// JSC fallback — objc_msgSend вместо performSelector (ARC-safe)
-static void showJSCAlert(void) {
-    void *jsc = dlopen("/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore", RTLD_NOLOAD);
-    if (!jsc) return;
-
-    Class JSContextClass = objc_getClass("JSContext");
-    if (!JSContextClass) return;
-
-    SEL currentCtxSEL = sel_getUid("currentContext");
-    id ctx = ((id (*)(id, SEL))objc_msgSend)(JSContextClass, currentCtxSEL);
-    if (!ctx) {
-        SEL allocSEL = sel_getUid("alloc");
-        SEL initSEL = sel_getUid("init");
-        ctx = ((id (*)(id, SEL))objc_msgSend)(JSContextClass, allocSEL);
-        ctx = ((id (*)(id, SEL))objc_msgSend)(ctx, initSEL);
+    // 1. UIApplication openURL:options:completionHandler: (iOS 10+)
+    Class UIAppClass = objc_getClass("UIApplication");
+    if (UIAppClass) {
+        id app = ((id (*)(id, SEL))objc_msgSend)(UIAppClass, sel_getUid("sharedApplication"));
+        if (app) {
+            SEL sel = sel_getUid("openURL:options:completionHandler:");
+            if (((BOOL (*)(id, SEL, id, id, id))objc_msgSend)(app, sel, url, @{}, nil)) {
+                return;
+            }
+        }
     }
 
-    SEL evalSEL = sel_getUid("evaluateScript:");
-    NSString *script = @"alert('Hello, world! Exploit OK!')";
-    ((id (*)(id, SEL, id))objc_msgSend)(ctx, evalSEL, script);
+    // 2. LSApplicationWorkspace openSensitiveURL:withOptions:
+    Class wsClass = objc_getClass("LSApplicationWorkspace");
+    if (wsClass) {
+        id ws = ((id (*)(id, SEL))objc_msgSend)(wsClass, sel_getUid("defaultWorkspace"));
+        SEL sel = sel_getUid("openSensitiveURL:withOptions:");
+        if (ws && [ws respondsToSelector:sel]) {
+            ((BOOL (*)(id, SEL, id, id))objc_msgSend)(ws, sel, url, @{});
+            return;
+        }
+    }
+
+    // 3. SBSOpenSensitiveURL (SpringBoardServices C API)
+    void *sbs = dlopen("/System/Library/PrivateFrameworks/SpringBoardServices.framework/SpringBoardServices", RTLD_LAZY);
+    if (sbs) {
+        int (*openURL)(void*, CFURLRef, void*) = dlsym(sbs, "SBSOpenSensitiveURL");
+        if (openURL) {
+            openURL(NULL, (__bridge CFURLRef)url, NULL);
+            return;
+        }
+    }
+
+    // 4. Fallback: AudioToolbox sound + vibrate
+    void *at = dlopen("/System/Library/Frameworks/AudioToolbox.framework/AudioToolbox", RTLD_LAZY);
+    if (at) {
+        void (*play)(int) = dlsym(at, "AudioServicesPlaySystemSound");
+        if (play) {
+            play(1007);
+            play(0xFFF);
+        }
+    }
 }
 
 int _process(void) {
-    showCFNotification();
-    showJSCAlert();
+    tryOpenURL();
     return 0;
 }
