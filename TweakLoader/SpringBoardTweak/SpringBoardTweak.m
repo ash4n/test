@@ -94,7 +94,7 @@ static void initStatusBarTweak(void) {
 
 - (void)showInjectedAlert {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Coruna"
-        message:@"SpringBoard is pwned. Long-press on the status bar to activate this menu." preferredStyle:UIAlertControllerStyleAlert];
+        message:@"Done" preferredStyle:UIAlertControllerStyleAlert];
 
     [alert addAction:[UIAlertAction actionWithTitle:@"Install TrollStore helper to Tips"
         style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
