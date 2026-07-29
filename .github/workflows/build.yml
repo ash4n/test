@@ -13,6 +13,8 @@ jobs:
 
       - name: Install Theos
         run: |
+          sudo mkdir -p /opt/theos
+          sudo chown $USER /opt/theos
           git clone --recursive https://github.com/theos/theos.git /opt/theos
 
       - name: Download iOS SDK
