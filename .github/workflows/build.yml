@@ -11,6 +11,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: brew install ldid
+
       - name: Install Theos
         run: |
           sudo mkdir -p /opt/theos
