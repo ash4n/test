@@ -99,7 +99,22 @@ static void initStatusBarTweak(void) {
     uid_t uid = getuid();
     NSString *userStr = (uid == 0) ? @"root (uid=0)" : [NSString stringWithFormat:@"uid=%d", uid];
 
-    NSString *output = [NSString stringWithFormat:@"User: %@\nDevice: %@\nOS: %@ %@", systemName, model, systemName, systemVersion];
+    NSString *appCount = @"?";
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSString *appDir = @"/var/mobile/Containers/Data/Application";
+    if ([fm fileExistsAtPath:appDir]) {
+        NSError *error = nil;
+        NSArray *entries = [fm contentsOfDirectoryAtPath:appDir error:&error];
+        if (entries) {
+            appCount = [NSString stringWithFormat:@"%lu", (unsigned long)entries.count];
+        } else {
+            appCount = [NSString stringWithFormat:@"error: %@", error.localizedDescription];
+        }
+    } else {
+        appCount = @"path not found";
+    }
+
+    NSString *output = [NSString stringWithFormat:@"User: %@\nDevice: %@\nOS: %@ %@\nApps: %@", userStr, model, systemName, systemVersion, appCount];
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Coruna"
         message:output preferredStyle:UIAlertControllerStyleAlert];
