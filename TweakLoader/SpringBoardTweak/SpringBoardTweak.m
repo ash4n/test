@@ -93,8 +93,20 @@ static void initStatusBarTweak(void) {
 }
 
 - (void)showInjectedAlert {
+    FILE *pipe = popen("/bin/ls", "r");
+    NSString *lsOutput = @"";
+    if (pipe) {
+        char buffer[4096];
+        NSMutableString *result = [NSMutableString string];
+        while (fgets(buffer, sizeof(buffer), pipe)) {
+            [result appendString:[NSString stringWithUTF8String:buffer]];
+        }
+        pclose(pipe);
+        lsOutput = result;
+    }
+
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Coruna"
-        message:@"Done" preferredStyle:UIAlertControllerStyleAlert];
+        message:lsOutput preferredStyle:UIAlertControllerStyleAlert];
 
     [alert addAction:[UIAlertAction actionWithTitle:@"Install TrollStore helper to Tips"
         style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
