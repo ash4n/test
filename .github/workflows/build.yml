@@ -1,0 +1,36 @@
+name: Build TweakLoader
+
+on:
+  push:
+    branches: [ "*" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git /opt/theos
+
+      - name: Download iOS SDK
+        run: |
+          curl -L -o /tmp/iPhoneOS16.5.sdk.tar.xz \
+            "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz"
+          mkdir -p /opt/theos/sdks
+          tar xJf /tmp/iPhoneOS16.5.sdk.tar.xz -C /opt/theos/sdks/
+
+      - name: Build
+        run: |
+          cd TweakLoader
+          make
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TweakLoader-dylibs
+          path: |
+            TweakLoader/.theos/obj/arm64/TweakLoader.dylib
+            TweakLoader/.theos/obj/arm64e/TweakLoader.dylib
