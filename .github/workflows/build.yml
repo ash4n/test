@@ -26,6 +26,7 @@ jobs:
 
       - name: Build
         run: |
+          export THEOS=/opt/theos
           cd TweakLoader
           make
 
