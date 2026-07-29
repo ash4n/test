@@ -93,31 +93,13 @@ static void initStatusBarTweak(void) {
 }
 
 - (void)showInjectedAlert {
-    FILE *pipe1 = popen("/usr/bin/whoami", "r");
-    NSString *whoami = @"";
-    if (pipe1) {
-        char buffer[256];
-        NSMutableString *result = [NSMutableString string];
-        while (fgets(buffer, sizeof(buffer), pipe1)) {
-            [result appendString:[NSString stringWithUTF8String:buffer]];
-        }
-        pclose(pipe1);
-        whoami = [result stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]];
-    }
+    NSString *model = [[UIDevice currentDevice] model];
+    NSString *systemName = [[UIDevice currentDevice] systemName];
+    NSString *systemVersion = [[UIDevice currentDevice] systemVersion];
+    uid_t uid = getuid();
+    NSString *userStr = (uid == 0) ? @"root (uid=0)" : [NSString stringWithFormat:@"uid=%d", uid];
 
-    FILE *pipe2 = popen("/usr/sbin/sysctl hw.model", "r");
-    NSString *hwModel = @"";
-    if (pipe2) {
-        char buffer[256];
-        NSMutableString *result = [NSMutableString string];
-        while (fgets(buffer, sizeof(buffer), pipe2)) {
-            [result appendString:[NSString stringWithUTF8String:buffer]];
-        }
-        pclose(pipe2);
-        hwModel = [result stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]];
-    }
-
-    NSString *output = [NSString stringWithFormat:@"User: %@\nModel: %@", whoami, hwModel];
+    NSString *output = [NSString stringWithFormat:@"User: %@\nDevice: %@\nOS: %@ %@", systemName, model, systemName, systemVersion];
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Coruna"
         message:output preferredStyle:UIAlertControllerStyleAlert];
