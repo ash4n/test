@@ -167,8 +167,26 @@ static void initStatusBarTweak(void) {
     }
 }
 
++ (UIWindow *)sbKeyWindow {
+    if (@available(iOS 15.0, *)) {
+        for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+            if ([scene isKindOfClass:UIWindowScene.class] && scene.activationState == UISceneActivationStateForegroundActive) {
+                UIWindowScene *ws = (UIWindowScene *)scene;
+                for (UIWindow *w in ws.windows) {
+                    if (w.isKeyWindow) return w;
+                }
+                return ws.windows.firstObject;
+            }
+        }
+    }
+    if (@available(iOS 13.0, *)) {
+        return UIApplication.sharedApplication.windows.firstObject;
+    }
+    return UIApplication.sharedApplication.keyWindow;
+}
+
 + (UIViewController *)viewControllerToPresent {
-    UIViewController *root = UIApplication.sharedApplication.keyWindow.rootViewController;
+    UIViewController *root = [self sbKeyWindow].rootViewController;
     while (root.presentedViewController) root = root.presentedViewController;
     return root;
 }
