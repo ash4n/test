@@ -85,8 +85,16 @@ jobs:
           cp src/payload_377bed/.theos/obj/arm64e/entry1_type0x09.dylib \
              payloads/377bed7460f7538f96bbad7bdc2b8294bdc54599/entry1_type0x09.dylib
           cd src/DriverWrapper
-          make clean
-          make package
+          make clean 2>&1 || true
+          make package 2>&1 | tee /tmp/build_driverwrapper.log; exit ${PIPESTATUS[0]}
+        continue-on-error: true
+
+      - name: Upload DriverWrapper build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-driverwrapper
+          path: /tmp/build_driverwrapper.log
 
       # ── Stage 5: Build TweakLoader ────────────────────────────────────
       - name: Build TweakLoader
