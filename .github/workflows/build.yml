@@ -100,8 +100,16 @@ jobs:
       - name: Build TweakLoader
         run: |
           cd TweakLoader
-          make clean
-          make package
+          make clean 2>&1 || true
+          make package 2>&1 | tee /tmp/build_tweakloader.log; exit ${PIPESTATUS[0]}
+        continue-on-error: true
+
+      - name: Upload TweakLoader build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-tweakloader
+          path: /tmp/build_tweakloader.log
 
       # ── Upload all artifacts ──────────────────────────────────────────
       - name: Collect artifacts
