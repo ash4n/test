@@ -34,8 +34,8 @@ jobs:
       - name: Build payload_377bed (type0x09)
         run: |
           cd src/payload_377bed
-          make clean 2>&1 || true
-          make package 2>&1 | tee /tmp/build_type09.log; exit ${PIPESTATUS[0]}
+          make clean
+          make package
         env:
           RECOMP_DEBUG_LOCALS: 0
           RECOMP_TRACE_DMAFAIL: 0
@@ -45,14 +45,6 @@ jobs:
           RECOMP_TEMP_FAKE_OBJC_CLASS: 0
           RECOMP_TEMP_FAKE_OBJC_ARC: 0
           TARGET_CODESIGN: ""
-        continue-on-error: true
-
-      - name: Upload build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log-type09
-          path: /tmp/build_type09.log
 
       # ── Stage 2: Build bootstrap ──────────────────────────────────────
       - name: Build bootstrap
@@ -65,83 +57,36 @@ jobs:
       - name: Build entry2
         run: |
           cd src/entry2
-          make clean 2>&1 || true
-          make package 2>&1 | tee /tmp/build_entry2.log; exit ${PIPESTATUS[0]}
-        continue-on-error: true
-
-      - name: Upload entry2 build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log-entry2
-          path: /tmp/build_entry2.log
+          make clean
+          make package
 
       # ── Stage 4: Build DriverWrapper (embeds type0x09) ────────────────
       - name: Build DriverWrapper
         run: |
-          # Copy the built type0x09 dylib into the expected path
-          # THEOS builds each arch separately; use arm64e for both (SpringBoard is arm64e)
           mkdir -p payloads/377bed7460f7538f96bbad7bdc2b8294bdc54599
           cp src/payload_377bed/.theos/obj/arm64e/entry1_type0x09.dylib \
              payloads/377bed7460f7538f96bbad7bdc2b8294bdc54599/entry1_type0x09.dylib
           cd src/DriverWrapper
-          make clean 2>&1 || true
-          make package 2>&1 | tee /tmp/build_driverwrapper.log; exit ${PIPESTATUS[0]}
-        continue-on-error: true
-
-      - name: Upload DriverWrapper build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log-driverwrapper
-          path: /tmp/build_driverwrapper.log
+          make clean
+          make package
 
       # ── Stage 5: Build TweakLoader ────────────────────────────────────
       - name: Build TweakLoader
         run: |
           cd TweakLoader
-          make clean 2>&1 || true
-          make package 2>&1 | tee /tmp/build_tweakloader.log; exit ${PIPESTATUS[0]}
-        continue-on-error: true
-
-      - name: Upload TweakLoader build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log-tweakloader
-          path: /tmp/build_tweakloader.log
+          make clean
+          make package
 
       # ── Upload all artifacts ──────────────────────────────────────────
       - name: Collect artifacts
         run: |
           mkdir -p artifacts
-          # type0x09 kernel exploit
-          ls -la src/payload_377bed/.theos/obj/ 2>/dev/null || true
-          find src/payload_377bed -name "*.dylib" 2>/dev/null | head -5
-          if [ -f src/payload_377bed/.theos/obj/arm64e/entry1_type0x09.dylib ]; then
-            cp src/payload_377bed/.theos/obj/arm64e/entry1_type0x09.dylib artifacts/
-          fi
-          # bootstrap
-          if [ -f src/bootstrap/.theos/obj/arm64/bootstrap.dylib ]; then
-            cp src/bootstrap/.theos/obj/arm64/bootstrap.dylib artifacts/
-          fi
-          # entry2
-          if [ -f src/entry2/.theos/obj/arm64e/entry2_type0x0f.dylib ]; then
-            cp src/entry2/.theos/obj/arm64e/entry2_type0x0f.dylib artifacts/
-          fi
-          # DriverWrapper
-          if [ -f src/DriverWrapper/.theos/obj/arm64e/DriverWrapper.dylib ]; then
-            cp src/DriverWrapper/.theos/obj/arm64e/DriverWrapper.dylib artifacts/
-          fi
-          # TweakLoader
-          if [ -f TweakLoader/.theos/obj/arm64e/TweakLoader.dylib ]; then
-            cp TweakLoader/.theos/obj/arm64e/TweakLoader.dylib artifacts/
-          fi
-          if [ -f TweakLoader/.theos/obj/arm64e/SpringBoardTweak.dylib ]; then
-            cp TweakLoader/.theos/obj/arm64e/SpringBoardTweak.dylib artifacts/
-          fi
-          ls -la artifacts/ 2>/dev/null || true
-        continue-on-error: true
+          cp src/payload_377bed/.theos/obj/arm64e/entry1_type0x09.dylib artifacts/
+          cp src/bootstrap/.theos/obj/arm64/bootstrap.dylib artifacts/
+          cp src/entry2/.theos/obj/arm64e/entry2_type0x0f.dylib artifacts/
+          cp src/DriverWrapper/.theos/obj/arm64e/DriverWrapper.dylib artifacts/
+          cp TweakLoader/.theos/obj/arm64e/TweakLoader.dylib artifacts/
+          cp TweakLoader/.theos/obj/arm64e/SpringBoardTweak.dylib artifacts/
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
