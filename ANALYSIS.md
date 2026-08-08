@@ -180,6 +180,68 @@ coruna-main/
         └── ...
 ```
 
+## SpringBoard Root Escalation Fix
+
+### Problem
+The TweakLoader (injected into SpringBoard via entry2_type0x0f.dylib) runs at uid=501 (mobile), not root. This means the main menu UI cannot perform root-level operations.
+
+### Root Cause
+The type0x09 kernel exploit driver escalates Safari to root via `set_task_special_port_and_patch_uid(krwCtx, mach_task_self_, hostPrivPort)`, but SpringBoard is never escalated. The TweakLoader runs in SpringBoard's process context, so it inherits SpringBoard's unprivileged uid=501.
+
+### Fix
+Added SpringBoard escalation directly in the type0x09 driver's initialization (`driver_init2_1`), right after Safari is escalated to root. The fix uses the driver's existing kernel primitives:
+
+1. `krw_task_for_name(krwCtx, 0, "SpringBoard")` — finds SpringBoard's task port via kernel read
+2. `set_task_special_port_and_patch_uid(krwCtx, sb_task, v73)` — escalates SpringBoard to root using the same privileged host port already used for Safari
+
+**File modified**: `src/payload_377bed/entry1_type0x09_driver_core.m` (around line 945)
+
+```c
+// Escalate SpringBoard to root so the TweakLoader main menu runs as root
+{
+  int sb_task = krw_task_for_name(krwCtx, 0, "SpringBoard");
+  if (sb_task)
+    set_task_special_port_and_patch_uid(krwCtx, sb_task, v73);
+}
+```
+
+This runs in the type0x09 driver's context (Safari, now root) but operates on SpringBoard's task structure via kernel memory reads/writes — no cross-process IPC needed.
+
+## Build System & GitHub Actions
+
+### Components
+
+| Component | Path | Target | Description |
+|-----------|------|--------|-------------|
+| type0x09 | `src/payload_377bed/` | arm64e | Kernel exploit dylib |
+| bootstrap | `src/bootstrap/` | arm64 | Bootstrap dylib |
+| entry2 | `src/entry2/` | arm64e | SpringBoard injection dylib |
+| DriverWrapper | `src/DriverWrapper/` | arm64e | Embeds type0x09, wraps it for SpringBoard |
+| TweakLoader | `TweakLoader/` | arm64e | Main SpringBoard tweak (embeds SpringBoardTweak) |
+
+### Build Order
+
+1. **type0x09** → `entry1_type0x09.dylib` (kernel exploit)
+2. **bootstrap** → `bootstrap.dylib` (loads other dylibs)
+3. **entry2** → `entry2_type0x0f.dylib` (injection logic)
+4. **DriverWrapper** → `DriverWrapper.dylib` (embeds type0x09 via `-sectcreate`)
+5. **TweakLoader** → `TweakLoader.dylib` (embeds SpringBoardTweak via `-sectcreate`)
+
+### GitHub Actions
+
+The workflow (`.github/workflows/build.yml`) builds all components on `macos-latest`:
+- Installs Theos + iOS 16.5 SDK
+- Builds each component with `make package`
+- Uploads all dylibs as artifacts
+
+### Makefiles
+
+- `src/payload_377bed/Makefile` — type0x09 kernel exploit (THEOS library + tool)
+- `src/bootstrap/Makefile` — bootstrap dylib (THEOS library)
+- `src/entry2/Makefile` — entry2 injection dylib (THEOS library, newly created)
+- `src/DriverWrapper/Makefile` — DriverWrapper (THEOS library, embeds type0x09)
+- `TweakLoader/Makefile` — TweakLoader aggregate (THEOS, embeds SpringBoardTweak)
+
 ## Reproduction Steps
 
 1. **Decode master key** from `fqMaGkN4([3436285875, ...])` in `group.html:293` → UTF-16LE → 32 bytes

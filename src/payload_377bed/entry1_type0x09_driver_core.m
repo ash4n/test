@@ -943,6 +943,12 @@ LABEL_293:
             if ( !set_task_special_port_and_patch_uid(krwCtx, mach_task_self_, v73) )
               return 163848;
             krw_ctx_set_flag(krwCtx, KRW_CTX_FLAG_HOST_PORT_READY);
+            // Escalate SpringBoard to root so the TweakLoader main menu runs as root
+            {
+              int sb_task = krw_task_for_name(krwCtx, 0, "SpringBoard");
+              if (sb_task)
+                set_task_special_port_and_patch_uid(krwCtx, sb_task, v73);
+            }
           }
           else
           {
