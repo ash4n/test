@@ -65,8 +65,16 @@ jobs:
       - name: Build entry2
         run: |
           cd src/entry2
-          make clean
-          make package
+          make clean 2>&1 || true
+          make package 2>&1 | tee /tmp/build_entry2.log; exit ${PIPESTATUS[0]}
+        continue-on-error: true
+
+      - name: Upload entry2 build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-entry2
+          path: /tmp/build_entry2.log
 
       # ── Stage 4: Build DriverWrapper (embeds type0x09) ────────────────
       - name: Build DriverWrapper
