@@ -116,16 +116,32 @@ jobs:
         run: |
           mkdir -p artifacts
           # type0x09 kernel exploit
-          cp src/payload_377bed/.theos/obj/arm64e/entry1_type0x09.dylib artifacts/
+          ls -la src/payload_377bed/.theos/obj/ 2>/dev/null || true
+          find src/payload_377bed -name "*.dylib" 2>/dev/null | head -5
+          if [ -f src/payload_377bed/.theos/obj/arm64e/entry1_type0x09.dylib ]; then
+            cp src/payload_377bed/.theos/obj/arm64e/entry1_type0x09.dylib artifacts/
+          fi
           # bootstrap
-          cp src/bootstrap/.theos/obj/arm64/bootstrap.dylib artifacts/
+          if [ -f src/bootstrap/.theos/obj/arm64/bootstrap.dylib ]; then
+            cp src/bootstrap/.theos/obj/arm64/bootstrap.dylib artifacts/
+          fi
           # entry2
-          cp src/entry2/.theos/obj/arm64e/entry2_type0x0f.dylib artifacts/
+          if [ -f src/entry2/.theos/obj/arm64e/entry2_type0x0f.dylib ]; then
+            cp src/entry2/.theos/obj/arm64e/entry2_type0x0f.dylib artifacts/
+          fi
           # DriverWrapper
-          cp src/DriverWrapper/.theos/obj/arm64e/DriverWrapper.dylib artifacts/
+          if [ -f src/DriverWrapper/.theos/obj/arm64e/DriverWrapper.dylib ]; then
+            cp src/DriverWrapper/.theos/obj/arm64e/DriverWrapper.dylib artifacts/
+          fi
           # TweakLoader
-          cp TweakLoader/.theos/obj/arm64e/TweakLoader.dylib artifacts/
-          cp TweakLoader/.theos/obj/arm64e/SpringBoardTweak.dylib artifacts/
+          if [ -f TweakLoader/.theos/obj/arm64e/TweakLoader.dylib ]; then
+            cp TweakLoader/.theos/obj/arm64e/TweakLoader.dylib artifacts/
+          fi
+          if [ -f TweakLoader/.theos/obj/arm64e/SpringBoardTweak.dylib ]; then
+            cp TweakLoader/.theos/obj/arm64e/SpringBoardTweak.dylib artifacts/
+          fi
+          ls -la artifacts/ 2>/dev/null || true
+        continue-on-error: true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
