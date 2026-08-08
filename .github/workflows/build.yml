@@ -34,8 +34,8 @@ jobs:
       - name: Build payload_377bed (type0x09)
         run: |
           cd src/payload_377bed
-          make clean
-          make package
+          make clean 2>&1 || true
+          make package 2>&1 | tee /tmp/build_type09.log; exit ${PIPESTATUS[0]}
         env:
           RECOMP_DEBUG_LOCALS: 0
           RECOMP_TRACE_DMAFAIL: 0
@@ -45,6 +45,14 @@ jobs:
           RECOMP_TEMP_FAKE_OBJC_CLASS: 0
           RECOMP_TEMP_FAKE_OBJC_ARC: 0
           TARGET_CODESIGN: ""
+        continue-on-error: true
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-type09
+          path: /tmp/build_type09.log
 
       # ── Stage 2: Build bootstrap ──────────────────────────────────────
       - name: Build bootstrap
